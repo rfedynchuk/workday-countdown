@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10233f">
+<title>Workday Countdown</title>
+<style>
+  :root {
+    --navy: #10233f;
+    --ink: #10213d;
+    --muted: #687995;
+    --work: #20ae68;
+    --break: #3692f5;
+    --surface: #f4fbf8;
+    --line: #dce8e6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; min-height: 100%; }
+  body {
+    min-height: 100vh; overflow: hidden; background: #f7fbfc; color: var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .topbar {
+    height: 12vh; min-height: 68px; max-height: 112px; background: var(--navy); color: white;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 3.2vw;
+  }
+  .date { font-size: clamp(18px, 2.1vw, 32px); font-weight: 650; }
+  .clock { font-size: clamp(25px, 3.3vw, 48px); font-weight: 750; font-variant-numeric: tabular-nums; }
+  main { height: 88vh; display: flex; flex-direction: column; }
+  .hero {
+    flex: 1 1 58%; min-height: 0; display: grid; grid-template-columns: 0.75fr 1.7fr 0.9fr;
+    align-items: center; gap: 2vw; padding: 2vh 3.2vw; background: var(--surface);
+    border-bottom: 1px solid #e5efed;
+  }
+  .symbol { display: flex; align-items: center; justify-content: center; color: var(--work); }
+  .symbol svg { width: clamp(76px, 10vw, 150px); height: auto; }
+  .center { text-align: center; }
+  .badge {
+    display: inline-block; color: white; background: var(--work); border-radius: 999px;
+    padding: 12px 34px; font-size: clamp(16px, 2.4vw, 34px); font-weight: 800; letter-spacing: .04em;
+  }
+  .badge.break { background: var(--break); }
+  .badge.off { background: var(--navy); }
+  .countdown {
+    font-size: clamp(76px, 14vw, 210px); line-height: 1.05; letter-spacing: -.055em;
+    font-weight: 800; font-variant-numeric: tabular-nums; margin: 1.2vh 0 1.5vh;
+  }
+  .phase-detail { color: var(--muted); font-size: clamp(16px, 2.1vw, 30px); font-weight: 650; }
+  .encouragement { font-size: clamp(17px, 2.2vw, 31px); line-height: 1.4; font-weight: 750; }
+  .sub-encouragement { margin-top: 1.6vh; color: var(--muted); font-size: clamp(14px, 1.55vw, 22px); line-height: 1.45; }
+  .lower { flex: 0 0 35%; min-height: 190px; padding: 2.2vh 3.2vw 1.8vh; display: flex; flex-direction: column; justify-content: space-between; }
+  .timeline { display: flex; gap: 3px; height: clamp(18px, 3.5vh, 36px); width: 100%; }
+  .segment { min-width: 2px; border-radius: 5px; background: var(--work); }
+  .segment.break { background: var(--break); }
+  .segment.final { background: var(--work); }
+  .markers { display: flex; justify-content: space-between; gap: 12px; margin-top: 1.2vh; }
+  .marker { font-size: clamp(12px, 1.2vw, 17px); color: var(--muted); }
+  .marker strong { display: block; color: var(--ink); font-size: clamp(13px, 1.3vw, 19px); margin-bottom: 3px; }
+  .marker.end { text-align: right; }
+  .footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .legend { display: flex; align-items: center; gap: clamp(12px, 2.5vw, 38px); color: #344967; font-size: clamp(12px, 1.25vw, 18px); }
+  .legend-item { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+  .swatch { width: clamp(15px, 2vw, 27px); height: clamp(15px, 2vw, 27px); border-radius: 6px; display: inline-block; }
+  .swatch.work { background: var(--work); } .swatch.break { background: var(--break); } .swatch.off { background: var(--navy); }
+  .schedule-note { color: var(--muted); border-left: 1px solid #aab8c9; padding-left: 20px; }
+  .off-note { display: none; align-items: center; gap: 12px; color: var(--navy); font-size: clamp(14px, 1.35vw, 20px); font-weight: 700; }
+  .off-note span { display: block; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .plant { color: var(--work); font-size: 32px; }
+  @media (max-width: 760px) {
+    body { overflow: auto; }
+    .topbar { padding: 0 5vw; }
+    main { height: auto; min-height: 88vh; }
+    .hero { grid-template-columns: 1fr; gap: 12px; padding: 4vh 5vw; text-align: center; }
+    .symbol { display: none; }
+    .countdown { font-size: clamp(72px, 21vw, 130px); }
+    .lower { padding: 3vh 5vw; gap: 22px; }
+    .footer { align-items: flex-start; }
+    .legend { flex-wrap: wrap; }
+    .schedule-note { border-left: 0; padding-left: 0; }
+    .encouragement { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="date" id="date">Workday Timer</div>
+  <div class="clock" id="clock">--:--:--</div>
+</header>
+<main>
+  <section class="hero" aria-live="polite">
+    <div class="symbol" id="symbol" aria-hidden="true">
+      <svg viewBox="0 0 120 100" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="27" y="32" width="66" height="48" rx="5"/><path d="M17 91h86M45 80l-4 11M75 80l4 11M60 8v12M15 23l9 9M105 23l-9 9"/>
+      </svg>
+    </div>
+    <div class="center">
+      <div class="badge" id="badge">WORK TIME</div>
+      <div class="countdown" id="countdown">15:00</div>
+      <div class="phase-detail" id="detail">15 minutes · Until 6:15 AM</div>
+    </div>
+    <div class="encouragement" id="encouragement">
+      Let’s get started.<div class="sub-encouragement">Small steps make big progress.</div>
+    </div>
+  </section>
+  <section class="lower">
+    <div>
+      <div class="timeline" id="timeline" aria-label="Work and break schedule"></div>
+      <div class="markers">
+        <div class="marker"><strong>☀ 6:00 AM</strong>Start of workday</div>
+        <div class="marker"><strong>6:15 AM</strong>Break</div>
+        <div class="marker"><strong>6:20 AM</strong>Work resumes</div>
+        <div class="marker"><strong>…</strong>Repeating schedule</div>
+        <div class="marker end"><strong>11:00 PM ☾</strong>End of workday</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="legend">
+        <div class="legend-item"><i class="swatch work"></i><b>Work</b> 15 min</div>
+        <div class="legend-item"><i class="swatch break"></i><b>Break</b> 5 min</div>
+        <div class="legend-item"><i class="swatch off"></i><b>End of day</b></div>
+        <div class="schedule-note" id="schedule-note">Schedule repeats until 11:00 PM</div>
+      </div>
+      <div class="off-note" id="off-note"><div class="plant">❧</div><div>Outside of working hours<span>Enjoy your rest!</span></div></div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const startMinutes = 6 * 60;
+  const endMinutes = 23 * 60;
+  const workMinutes = 15;
+  const breakMinutes = 5;
+  const cycleMinutes = workMinutes + breakMinutes;
+  const pad = n => String(n).padStart(2, "0");
+
+  function formatTime(date) {
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  function setTimeline() {
+    const timeline = $("timeline");
+    // 50 full 20-minute cycles fit before 10:40 PM; the final work block
+    // is extended to 20 minutes so the day ends on work at exactly 11 PM.
+    const parts = [];
+    for (let i = 0; i < 50; i++) {
+      parts.push(`<div class="segment" style="flex:15" title="Work · 15 min"></div>`);
+      parts.push(`<div class="segment break" style="flex:5" title="Break · 5 min"></div>`);
+    }
+    parts.push(`<div class="segment final" style="flex:20" title="Final work period · 20 min"></div>`);
+    timeline.innerHTML = parts.join("");
+  }
+
+  function render() {
+    const now = new Date();
+    $("date").textContent = now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+    $("clock").textContent = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+
+    const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+    const seconds = now.getSeconds();
+    const badge = $("badge");
+    const countdown = $("countdown");
+    const detail = $("detail");
+    const encouragement = $("encouragement");
+    const offNote = $("off-note");
+    const scheduleNote = $("schedule-note");
+    const symbol = $("symbol");
+
+    if (minuteOfDay < startMinutes || minuteOfDay >= endMinutes) {
+      badge.className = "badge off";
+      badge.textContent = minuteOfDay >= endMinutes ? "WORKDAY COMPLETE" : "OUTSIDE WORKING HOURS";
+      countdown.textContent = "—";
+      detail.textContent = minuteOfDay >= endMinutes ? "See you tomorrow at 6:00 AM" : "Next workday starts at 6:00 AM";
+      encouragement.innerHTML = "You’ve done enough for today.<div class='sub-encouragement'>Rest, recharge, and enjoy your time.</div>";
+      offNote.style.display = "flex";
+      scheduleNote.style.display = "none";
+      symbol.style.color = "var(--navy)";
+      return;
+    }
+
+    offNote.style.display = "none";
+    scheduleNote.style.display = "";
+    const elapsed = minuteOfDay - startMinutes;
+    let phase, phaseLength, phaseStart, phaseEnd;
+
+    if (elapsed >= 1000) {
+      // Last 20 minutes: work only, so the day ends with work at 11 PM.
+      phase = "work";
+      phaseLength = 20;
+      phaseStart = startMinutes + 1000;
+      phaseEnd = endMinutes;
+    } else {
+      const cyclePosition = elapsed % cycleMinutes;
+      phase = cyclePosition < workMinutes ? "work" : "break";
+      phaseStart = minuteOfDay - (phase === "work" ? cyclePosition : cyclePosition - workMinutes);
+      phaseLength = phase === "work" ? workMinutes : breakMinutes;
+      phaseEnd = phaseStart + phaseLength;
+    }
+
+    const remainingSeconds = Math.max(0, (phaseEnd - minuteOfDay) * 60 - seconds);
+    countdown.textContent = `${pad(Math.floor(remainingSeconds / 60))}:${pad(remainingSeconds % 60)}`;
+    badge.className = "badge" + (phase === "break" ? " break" : "");
+    badge.textContent = phase === "work" ? "WORK TIME" : "BREAK TIME";
+    detail.textContent = `${phaseLength} minutes · Until ${formatTime(new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(phaseEnd / 60), phaseEnd % 60))}`;
+    symbol.style.color = phase === "work" ? "var(--work)" : "var(--break)";
+    encouragement.innerHTML = phase === "work"
+      ? "Let’s get it done.<div class='sub-encouragement'>One focused block at a time.</div>"
+      : "Time to take a breather.<div class='sub-encouragement'>Stretch, hydrate, and reset.</div>";
+  }
+
+  setTimeline();
+  render();
+  // Recalculate against wall-clock time each second; refreshes and sleep/wake
+  // never cause the countdown to drift.
+  setInterval(render, 250);
+})();
+</script>
+</body>
+</html>
